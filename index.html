@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drug-Induce KPH. 66-69</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; padding: 20px; background-color: #f0f2f5; margin: 0; color: #333; }
+        .header-title { text-align: center; color: #1a237e; margin-bottom: 30px; font-size: 2em; font-weight: bold; }
+        
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .table-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table-card h3 { margin-top: 0; text-align: center; color: #3f51b5; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .table-wrapper { max-height: 450px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid #eee; }
+        th:nth-child(1), td:nth-child(1) { text-align: center; width: 40px; }
+        th:nth-child(2), td:nth-child(2) { text-align: left; }
+        
+        th { position: sticky; top: 0; background-color: #e8eaf6; color: #1a237e; z-index: 1; font-weight: bold; }
+        tbody tr:hover { background-color: #f5f5f5; }
+
+        .btn-graph { 
+            display: block; width: 100%; padding: 10px; background-color: #3f51b5; color: white; 
+            border: none; border-radius: 5px; cursor: pointer; font-size: 1em; transition: 0.3s;
+        }
+        .btn-graph:hover { background-color: #303f9f; }
+
+        .chart-section { display: none; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 900px; margin: 0 auto 40px auto; }
+        .chart-section.active { display: block; }
+
+        /* สไตล์สำหรับลิงก์ท้ายหน้า */
+        .footer-link { text-align: center; margin-top: 40px; margin-bottom: 20px; font-size: 1em; color: #666; }
+        .footer-link a { color: #1a237e; text-decoration: none; font-weight: bold; background-color: white; padding: 8px 15px; border-radius: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.3s; }
+        .footer-link a:hover { background-color: #1a237e; color: white; }
+    </style>
+</head>
+<body>
+
+    <div style="max-width: 1400px; margin: auto;">
+        <div class="header-title">Drug-Induce KPH. 66-69</div>
+
+        <div id="chartContainer" class="chart-section">
+            <h2 id="chartTitle" style="text-align: center; color: #1a237e; margin-top: 0;">กราฟ 10 อันดับ</h2>
+            <canvas id="myChart"></canvas>
+        </div>
+
+        <div class="grid-container">
+            <div class="table-card">
+                <h3>ผู้ป่วยทั้งหมด (รวม)</h3>
+                <div class="table-wrapper"><table id="tableTotal"></table></div>
+                <button class="btn-graph" onclick="showGraph('total', 'กราฟ 10 อันดับโรค - ผู้ป่วยทั้งหมด (รวม)')">📊 ดูกราฟ Top 10 (รวม)</button>
+            </div>
+
+            <div class="table-card">
+                <h3>ผู้ป่วยนอก (OPD)</h3>
+                <div class="table-wrapper"><table id="tableOPD"></table></div>
+                <button class="btn-graph" onclick="showGraph('opd', 'กราฟ 10 อันดับโรค - ผู้ป่วยนอก (OPD)')">📊 ดูกราฟ Top 10 (OPD)</button>
+            </div>
+
+            <div class="table-card">
+                <h3>ผู้ป่วยใน (IPD)</h3>
+                <div class="table-wrapper"><table id="tableIPD"></table></div>
+                <button class="btn-graph" onclick="showGraph('ipd', 'กราฟ 10 อันดับโรค - ผู้ป่วยใน (IPD)')">📊 ดูกราฟ Top 10 (IPD)</button>
+            </div>
+        </div>
+
+        <div class="footer-link">
+            Raw data &gt;&gt; 
+            <a href="https://docs.google.com/spreadsheets/d/1racw2pgO4onmvXtUSkkLyjf4wD0MnXOlg25WSFDPZIo/edit?gid=1546273871#gid=1546273871" target="_blank">
+                เปิด Google Sheets
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/1racw2pgO4onmvXtUSkkLyjf4wD0MnXOlg25WSFDPZIo/export?format=csv&gid=1546273871";
+        
+        let globalData = { total: [], opd: [], ipd: [] };
+        let currentChart = null;
+
+        Papa.parse(sheetUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const rawData = results.data;
+                const stats = { total: {}, opd: {}, ipd: {} };
+
+                rawData.forEach(row => {
+                    const diag = row["name_diag"] ? row["name_diag"].trim() : "";
+                    if (!diag) return;
+
+                    const anValue = row["an"] ? row["an"].trim() : "";
+                    const type = anValue === "" ? "opd" : "ipd";
+                    
+                    let yearRaw = row["BDG_YEAR"] ? row["BDG_YEAR"].toString().trim() : "";
+                    let year = "other";
+                    if (yearRaw.includes("66") || yearRaw === "2566") year = "66";
+                    else if (yearRaw.includes("67") || yearRaw === "2567") year = "67";
+                    else if (yearRaw.includes("68") || yearRaw === "2568") year = "68";
+                    else if (yearRaw.includes("69") || yearRaw === "2569") year = "69";
+
+                    const addStat = (group) => {
+                        if (!stats[group][diag]) stats[group][diag] = { "66": 0, "67": 0, "68": 0, "69": 0, total: 0 };
+                        if (year !== "other") stats[group][diag][year]++;
+                        stats[group][diag].total++;
+                    };
+
+                    addStat("total");
+                    addStat(type);
+                });
+
+                const formatData = (obj) => Object.keys(obj)
+                    .map(key => ({ name: key, ...obj[key] }))
+                    .sort((a, b) => b.total - a.total);
+
+                globalData.total = formatData(stats.total);
+                globalData.opd = formatData(stats.opd);
+                globalData.ipd = formatData(stats.ipd);
+
+                renderTable('tableTotal', globalData.total);
+                renderTable('tableOPD', globalData.opd);
+                renderTable('tableIPD', globalData.ipd);
+            }
+        });
+
+        function renderTable(elementId, dataArray) {
+            let html = `
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>ชื่อโรค</th>
+                        <th>ปี 66</th>
+                        <th>ปี 67</th>
+                        <th>ปี 68</th>
+                        <th>ปี 69<br><small>(4เดือน)</small></th>
+                        <th>รวม</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            dataArray.forEach((item, index) => {
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item.name}</td>
+                        <td>${item["66"].toLocaleString()}</td>
+                        <td>${item["67"].toLocaleString()}</td>
+                        <td>${item["68"].toLocaleString()}</td>
+                        <td>${item["69"].toLocaleString()}</td>
+                        <td style="font-weight:bold; color:#1a237e;">${item.total.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody>';
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        function showGraph(type, titleText) {
+            const dataArray = globalData[type].slice(0, 10);
+            const labels = dataArray.map(item => item.name);
+            const dataValues = dataArray.map(item => item.total);
+
+            document.getElementById('chartContainer').classList.add('active');
+            document.getElementById('chartTitle').innerText = titleText;
+            
+            document.getElementById('chartContainer').scrollIntoView({ behavior: 'smooth' });
+
+            if (currentChart) { currentChart.destroy(); }
+
+            const ctx = document.getElementById('myChart').getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'จำนวนรวมผู้ป่วย (ราย)',
+                        data: dataValues,
+                        backgroundColor: type === 'opd' ? 'rgba(76, 175, 80, 0.7)' : type === 'ipd' ? 'rgba(255, 152, 0, 0.7)' : 'rgba(63, 81, 181, 0.7)',
+                        borderColor: type === 'opd' ? '#4caf50' : type === 'ipd' ? '#ff9800' : '#3f51b5',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
