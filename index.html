@@ -4,35 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drug-Induce KPH. 66-69</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
+        /* ตั้งค่ารูปแบบตัวอักษร, พื้นที่ขอบ, สีพื้นหลังเว็บ และสีตัวอักษรหลัก */
         body { font-family: 'Sarabun', sans-serif; padding: 20px; background-color: #f0f2f5; margin: 0; color: #333; }
+        
+        /* ตกแต่งหัวข้อหลัก (Drug-Induce KPH...) ให้อยู่ตรงกลาง ตัวใหญ่ และเป็นสีน้ำเงินเข้ม */
         .header-title { text-align: center; color: #1a237e; margin-bottom: 30px; font-size: 2em; font-weight: bold; }
         
+        /* จัดโครงสร้างแบบตาราง (Grid) ให้การ์ดเรียงต่อกัน และปรับขนาดอัตโนมัติตามขนาดจอ */
         .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        
+        /* ตกแต่งกล่องพื้นหลังสีขาวที่ใช้เก็บตารางแต่ละอัน (ใส่เงา ลบมุม) */
         .table-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        /* ตกแต่งหัวข้อของแต่ละตาราง (ผู้ป่วยรวม, OPD, IPD) ให้มีเส้นใต้กั้น */
         .table-card h3 { margin-top: 0; text-align: center; color: #3f51b5; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         
+        /* กำหนดความสูงสูงสุดของตาราง ถ้าข้อมูลยาวเกินไปให้มีแถบเลื่อน (Scrollbar) โผล่ขึ้นมา */
         .table-wrapper { max-height: 450px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px; margin-bottom: 15px; }
+        
+        /* ตกแต่งตารางให้เต็มพื้นที่และจัดระเบียบเส้นขอบ */
         table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
         th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid #eee; }
-        th:nth-child(1), td:nth-child(1) { text-align: center; width: 40px; }
-        th:nth-child(2), td:nth-child(2) { text-align: left; }
+        th:nth-child(1), td:nth-child(1) { text-align: center; width: 40px; } /* จัดคอลัมน์ลำดับที่ 1 ให้ตรงกลาง */
+        th:nth-child(2), td:nth-child(2) { text-align: left; } /* จัดคอลัมน์ชื่อโรค ให้อยู่ชิดซ้าย */
         
+        /* ล็อกหัวตาราง (th) ให้ติดอยู่ด้านบนสุดเวลาเลื่อน Scroll ลงมา (Sticky) */
         th { position: sticky; top: 0; background-color: #e8eaf6; color: #1a237e; z-index: 1; font-weight: bold; }
+        
+        /* เมื่อเอาเมาส์ไปชี้ที่แถวในตาราง ให้เปลี่ยนสีพื้นหลังอ่อนๆ */
         tbody tr:hover { background-color: #f5f5f5; }
 
+        /* ตกแต่งปุ่มกดดูกราฟ ให้เป็นสีน้ำเงิน มุมมน */
         .btn-graph { 
             display: block; width: 100%; padding: 10px; background-color: #3f51b5; color: white; 
             border: none; border-radius: 5px; cursor: pointer; font-size: 1em; transition: 0.3s;
         }
+        /* เมื่อเอาเมาส์ชี้ที่ปุ่มดูกราฟ ให้ปุ่มเปลี่ยนเป็นสีน้ำเงินที่เข้มขึ้น */
         .btn-graph:hover { background-color: #303f9f; }
 
+        /* ตกแต่งกล่องสำหรับแสดงกราฟ โดยค่าเริ่มต้นกำหนดให้ ซ่อนไว้ก่อน (display: none) */
         .chart-section { display: none; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 900px; margin: 0 auto 40px auto; }
+        
+        /* คลาสพิเศษ เมื่อเพิ่มคำว่า active จะทำให้กล่องกราฟแสดงผลขึ้นมา (display: block) */
         .chart-section.active { display: block; }
 
-        /* สไตล์สำหรับลิงก์ท้ายหน้า */
+        /* สไตล์สำหรับลิงก์ท้ายหน้า (Raw Data) จัดให้อยู่ตรงกลางและตกแต่งให้สวยงาม */
         .footer-link { text-align: center; margin-top: 40px; margin-bottom: 20px; font-size: 1em; color: #666; }
         .footer-link a { color: #1a237e; text-decoration: none; font-weight: bold; background-color: white; padding: 8px 15px; border-radius: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.3s; }
         .footer-link a:hover { background-color: #1a237e; color: white; }
@@ -41,14 +62,15 @@
 <body>
 
     <div style="max-width: 1400px; margin: auto;">
+        
         <div class="header-title">Drug-Induce KPH. 66-69</div>
 
         <div id="chartContainer" class="chart-section">
             <h2 id="chartTitle" style="text-align: center; color: #1a237e; margin-top: 0;">กราฟ 10 อันดับ</h2>
-            <canvas id="myChart"></canvas>
-        </div>
+            <canvas id="myChart"></canvas> </div>
 
         <div class="grid-container">
+            
             <div class="table-card">
                 <h3>ผู้ป่วยทั้งหมด (รวม)</h3>
                 <div class="table-wrapper"><table id="tableTotal"></table></div>
@@ -77,57 +99,85 @@
     </div>
 
     <script>
+        // กำหนด URL ของ Google Sheets ที่เผยแพร่เป็นรูปแบบ CSV เพื่อให้โค้ดดึงข้อมูลมาได้
         const sheetUrl = "https://docs.google.com/spreadsheets/d/1racw2pgO4onmvXtUSkkLyjf4wD0MnXOlg25WSFDPZIo/export?format=csv&gid=1546273871";
         
+        // สร้างตัวแปร globalData เพื่อเก็บข้อมูลแยกเป็นหมวดหมู่ (รวม, opd, ipd) เพื่อเอาไปสร้างตารางและกราฟ
         let globalData = { total: [], opd: [], ipd: [] };
+        
+        // สร้างตัวแปรเพื่อเก็บข้อมูลกราฟปัจจุบัน (ไว้สำหรับทำลายกราฟเก่าทิ้งก่อนวาดกราฟใหม่)
         let currentChart = null;
 
+        // เรียกใช้ PapaParse เพื่อดาวน์โหลดและอ่านไฟล์ CSV จาก URL ที่กำหนด
         Papa.parse(sheetUrl, {
-            download: true,
-            header: true,
-            complete: function(results) {
-                const rawData = results.data;
+            download: true, // สั่งให้ดาวน์โหลดไฟล์ผ่าน URL
+            header: true, // บอกว่าแถวแรกของ CSV เป็นหัวคอลัมน์ (ชื่อตัวแปร)
+            complete: function(results) { // เมื่อดาวน์โหลดและอ่านข้อมูลเสร็จแล้ว ให้ทำตามฟังก์ชันนี้
+                
+                const rawData = results.data; // เก็บข้อมูลทั้งหมดที่อ่านได้ไว้ในตัวแปร rawData
+                
+                // สร้างตัวแปรชั่วคราวเพื่อเก็บผลลัพธ์การนับจำนวนโรค แยกตามประเภท
                 const stats = { total: {}, opd: {}, ipd: {} };
 
+                // วนลูปอ่านข้อมูลทีละแถว (row) จากข้อมูลทั้งหมด 8,000 แถว
                 rawData.forEach(row => {
+                    // ดึงชื่อโรคออกมา ถ้าไม่มีชื่อโรค ให้ข้ามแถวนี้ไปเลย (return)
                     const diag = row["name_diag"] ? row["name_diag"].trim() : "";
                     if (!diag) return;
 
+                    // ดึงค่า AN (Admission Number) เพื่อเช็คว่าเป็น OPD หรือ IPD
                     const anValue = row["an"] ? row["an"].trim() : "";
+                    // ถ้าช่อง AN ว่างเปล่า แปลว่าเป็น OPD, ถ้ามีข้อมูลแปลว่าเป็น IPD
                     const type = anValue === "" ? "opd" : "ipd";
                     
+                    // ดึงปีงบประมาณ และแปลงเป็นข้อความ (String)
                     let yearRaw = row["BDG_YEAR"] ? row["BDG_YEAR"].toString().trim() : "";
-                    let year = "other";
+                    let year = "other"; // ตั้งค่าเริ่มต้นให้ปีเป็น 'อื่น'
+                    
+                    // เช็คว่าข้อมูลปีตรงกับปี 66, 67, 68 หรือ 69 หรือไม่ ถ้าใช่ให้จำไว้
                     if (yearRaw.includes("66") || yearRaw === "2566") year = "66";
                     else if (yearRaw.includes("67") || yearRaw === "2567") year = "67";
                     else if (yearRaw.includes("68") || yearRaw === "2568") year = "68";
                     else if (yearRaw.includes("69") || yearRaw === "2569") year = "69";
 
+                    // ฟังก์ชันผู้ช่วย สำหรับบวกตัวเลขสถิติเข้าไปในกลุ่มที่ระบุ (รวม, opd, หรือ ipd)
                     const addStat = (group) => {
+                        // ถ้าโรคนั้นยังไม่เคยถูกนับเลย ให้ตั้งค่าเริ่มต้นเป็น 0 ทุกปี
                         if (!stats[group][diag]) stats[group][diag] = { "66": 0, "67": 0, "68": 0, "69": 0, total: 0 };
+                        
+                        // บวก 1 ให้กับปีที่พบโรคนี้
                         if (year !== "other") stats[group][diag][year]++;
+                        
+                        // บวก 1 ให้กับยอดรวมทั้งหมดของโรคนี้
                         stats[group][diag].total++;
                     };
 
+                    // เรียกใช้ฟังก์ชันเพื่อนับลงในกลุ่ม "รวมทั้งหมด"
                     addStat("total");
+                    // เรียกใช้ฟังก์ชันเพื่อนับลงในกลุ่ม "OPD" หรือ "IPD" ตามที่แยกไว้
                     addStat(type);
                 });
 
+                // ฟังก์ชันสำหรับแปลงข้อมูลจาก Object ให้เป็น Array และเรียงลำดับจากมากไปน้อย
                 const formatData = (obj) => Object.keys(obj)
-                    .map(key => ({ name: key, ...obj[key] }))
-                    .sort((a, b) => b.total - a.total);
+                    .map(key => ({ name: key, ...obj[key] })) // นำชื่อโรคและจำนวนมาจัดรูปแบบใหม่
+                    .sort((a, b) => b.total - a.total); // เรียงลำดับ (sort) โดยดูจากยอดรวม (total) ให้มากสุดอยู่บน
 
+                // นำข้อมูลที่เรียงลำดับแล้วไปเก็บไว้ในตัวแปรหลัก
                 globalData.total = formatData(stats.total);
                 globalData.opd = formatData(stats.opd);
                 globalData.ipd = formatData(stats.ipd);
 
+                // ส่งข้อมูลไปสร้างตารางใน HTML ตามรหัส id ที่กำหนด
                 renderTable('tableTotal', globalData.total);
                 renderTable('tableOPD', globalData.opd);
                 renderTable('tableIPD', globalData.ipd);
             }
         });
 
+        // ฟังก์ชันสร้างตาราง (รับชื่อ id ของตาราง และ ข้อมูลที่จะนำมาแสดง)
         function renderTable(elementId, dataArray) {
+            // สร้างโครงสร้างหัวตารางเป็น HTML เก็บไว้ในตัวแปร html
             let html = `
                 <thead>
                     <tr>
@@ -142,53 +192,68 @@
                 </thead>
                 <tbody>
             `;
+            
+            // วนลูปข้อมูลแต่ละแถว เพื่อสร้างเนื้อหา (body) ของตาราง
             dataArray.forEach((item, index) => {
                 html += `
                     <tr>
-                        <td>${index + 1}</td>
-                        <td>${item.name}</td>
-                        <td>${item["66"].toLocaleString()}</td>
-                        <td>${item["67"].toLocaleString()}</td>
+                        <td>${index + 1}</td> <td>${item.name}</td> <td>${item["66"].toLocaleString()}</td> <td>${item["67"].toLocaleString()}</td>
                         <td>${item["68"].toLocaleString()}</td>
                         <td>${item["69"].toLocaleString()}</td>
-                        <td style="font-weight:bold; color:#1a237e;">${item.total.toLocaleString()}</td>
-                    </tr>
+                        <td style="font-weight:bold; color:#1a237e;">${item.total.toLocaleString()}</td> </tr>
                 `;
             });
-            html += '</tbody>';
+            html += '</tbody>'; // ปิดแท็กเนื้อหาตาราง
+            
+            // นำ HTML ที่สร้างเสร็จแล้ว ไปยัดใส่ในตารางบนหน้าเว็บ
             document.getElementById(elementId).innerHTML = html;
         }
 
+        // ฟังก์ชันสำหรับแสดงกราฟ เมื่อผู้ใช้กดปุ่มดูกราฟ (รับประเภทข้อมูล และ ชื่อหัวข้อกราฟ)
         function showGraph(type, titleText) {
+            // ตัดเอาข้อมูลมาแค่ 10 อันดับแรก (Top 10)
             const dataArray = globalData[type].slice(0, 10);
+            
+            // แยกชื่อโรคไปใส่แกน X
             const labels = dataArray.map(item => item.name);
+            // แยกยอดรวมไปใส่แกน Y
             const dataValues = dataArray.map(item => item.total);
 
+            // ทำให้กล่องกราฟ (ที่เคยซ่อนอยู่) แสดงขึ้นมาบนหน้าจอ
             document.getElementById('chartContainer').classList.add('active');
+            
+            // เปลี่ยนชื่อหัวข้อกราฟตามปุ่มที่กด
             document.getElementById('chartTitle').innerText = titleText;
             
+            // สั่งให้หน้าเว็บเลื่อน (Scroll) ขึ้นไปหาตำแหน่งของกราฟแบบสมูท
             document.getElementById('chartContainer').scrollIntoView({ behavior: 'smooth' });
 
+            // ถ้าย้อนกลับไปเคยกดดูกราฟอื่นมาแล้ว ให้ลบกราฟตัวเก่าทิ้งก่อน (ป้องกันกราฟซ้อนกัน)
             if (currentChart) { currentChart.destroy(); }
 
+            // จับจองพื้นที่สำหรับวาดกราฟ
             const ctx = document.getElementById('myChart').getContext('2d');
+            
+            // สั่ง Chart.js วาดกราฟใหม่
             currentChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'bar', // เลือกรูปแบบกราฟแท่ง
                 data: {
-                    labels: labels,
+                    labels: labels, // ชื่อโรคแกนตั้ง
                     datasets: [{
                         label: 'จำนวนรวมผู้ป่วย (ราย)',
-                        data: dataValues,
+                        data: dataValues, // ตัวเลขข้อมูล
+                        
+                        // กำหนดสีของกราฟแท่ง ถ้ากดปุ่ม OPD = สีเขียว, IPD = สีส้ม, Total = สีน้ำเงิน
                         backgroundColor: type === 'opd' ? 'rgba(76, 175, 80, 0.7)' : type === 'ipd' ? 'rgba(255, 152, 0, 0.7)' : 'rgba(63, 81, 181, 0.7)',
                         borderColor: type === 'opd' ? '#4caf50' : type === 'ipd' ? '#ff9800' : '#3f51b5',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        borderWidth: 1, // ความหนาเส้นขอบแท่งกราฟ
+                        borderRadius: 4 // ทำมุมของแท่งกราฟให้โค้งมนนิดๆ
                     }]
                 },
                 options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    plugins: { legend: { display: false } }
+                    indexAxis: 'y', // สลับแกนให้เป็นกราฟแท่งแนวนอน (อ่านชื่อโรคยาวๆ ได้ง่าย)
+                    responsive: true, // ทำให้กราฟย่อขยายตามขนาดหน้าจอคอม/มือถือ
+                    plugins: { legend: { display: false } } // ซ่อนคำอธิบายกราฟ (กล่องสี่เหลี่ยมเล็กๆ ด้านบน)
                 }
             });
         }
